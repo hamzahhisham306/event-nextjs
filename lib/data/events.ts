@@ -1,4 +1,5 @@
-import type { FlattenMaps, Types } from "mongoose";
+import type { Document, FlattenMaps, Types } from "mongoose";
+import { cacheLife } from "next/cache";
 import { connection } from "next/server";
 
 import { Event, type IEvent } from "@/database";
@@ -17,7 +18,7 @@ import connectDB from "@/lib/mongodb";
  * Mapping fields explicitly also keeps the payload a whitelist, so nothing new
  * added to the schema leaks to the browser by accident.
  */
-export type EventDTO = Omit<IEvent, "createdAt" | "updatedAt"> & {
+export type EventDTO = Omit<IEvent, keyof Document | "createdAt" | "updatedAt"> & {
   _id: string;
   createdAt: string;
   updatedAt: string;
@@ -55,8 +56,8 @@ function toEventDTO(event: LeanEvent): EventDTO {
  * and the component awaiting it — from the prerender, so it runs at request
  * time and streams into the `<Suspense>` boundary that wraps it.
  *
- * Callers inside a `use cache` scope must use the functions below instead: a
- * request-time API like `connection()` is not allowed within a cached scope.
+ * The functions below cache their own result instead, so they stay callable
+ * from cached and uncached scopes alike.
  */
 export async function getEvents(): Promise<EventDTO[]> {
   await connection();
@@ -69,6 +70,9 @@ export async function getEvents(): Promise<EventDTO[]> {
 
 /** A single event by its public slug, or `null` when no such event exists. */
 export async function getEventBySlug(slug: string): Promise<EventDTO | null> {
+  "use cache";
+  cacheLife("hours");
+
   await connectDB();
 
   const event = await Event.findOne({ slug: slug.trim().toLowerCase() }).lean<LeanEvent | null>();
@@ -78,6 +82,9 @@ export async function getEventBySlug(slug: string): Promise<EventDTO | null> {
 
 /** Other events sharing at least one tag with the given event. */
 export async function getSimilarEventsBySlug(slug: string): Promise<EventDTO[]> {
+  "use cache";
+  cacheLife("hours");
+
   await connectDB();
 
   const event = await Event.findOne({ slug: slug.trim().toLowerCase() }).lean<LeanEvent | null>();
