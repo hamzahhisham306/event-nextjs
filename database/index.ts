@@ -1,5 +1,7 @@
-// Single import surface for the data layer: `import { Event, Booking } from "@/database"`.
-// Importing from here also guarantees both models are registered with Mongoose,
-// which `populate("eventId")` relies on.
-export { Event, EVENT_MODES, type EventMode, type IEvent } from "./event.model";
-export { Booking, type IBooking } from "./booking.model";
+// Database models exports
+export { default as Event } from './event.model';
+export { default as Booking } from './booking.model';
+
+// TypeScript interfaces exports
+export type { IEvent } from './event.model';
+export type { IBooking } from './booking.model';

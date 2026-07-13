@@ -1,62 +1,76 @@
-import { Schema, model, models, type Model, type Types } from "mongoose";
+import { Schema, model, models, Document, Types } from 'mongoose';
+import Event from './event.model';
 
-import { Event } from "./event.model";
-
-export interface IBooking {
-  /** Reference to the booked `Event`. */
+// TypeScript interface for Booking document
+export interface IBooking extends Document {
   eventId: Types.ObjectId;
   email: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Deliberately permissive: it rejects the common malformed shapes (no @, no dot,
-// embedded whitespace) without trying to out-guess RFC 5322. Real verification is
-// a confirmation email, not a regex.
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const BookingSchema = new Schema<IBooking>(
   {
     eventId: {
       type: Schema.Types.ObjectId,
-      // `ref` is what lets callers `.populate("eventId")`; it does not enforce
-      // that the event exists — the pre-save hook below does that.
-      ref: "Event",
-      required: true,
+      ref: 'Event',
+      required: [true, 'Event ID is required'],
     },
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       trim: true,
-      // Stored lowercase so the same address can't book twice under different
-      // casing. Setters run before validators, so the pattern sees the final value.
       lowercase: true,
-      match: [EMAIL_PATTERN, "{VALUE} is not a valid email address."],
+      validate: {
+        validator: function (email: string) {
+          // RFC 5322 compliant email validation regex
+          const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+          return emailRegex.test(email);
+        },
+        message: 'Please provide a valid email address',
+      },
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true, // Auto-generate createdAt and updatedAt
+  }
 );
 
-// Bookings are read by event ("who booked this event?"), which is an unindexed
-// collection scan without this.
-BookingSchema.index({ eventId: 1 });
+// Pre-save hook to validate events exists before creating booking
+BookingSchema.pre('save', async function (next) {
+  const booking = this as IBooking;
 
-// MongoDB does not enforce referential integrity, so a booking can otherwise point
-// at an event that never existed or was deleted. Guarded by `isModified` to keep
-// this to one extra query on insert rather than on every save.
-BookingSchema.pre("save", async function () {
-  if (!this.isModified("eventId")) {
-    return;
+  // Only validate eventId if it's new or modified
+  if (booking.isModified('eventId') || booking.isNew) {
+    try {
+      const eventExists = await Event.findById(booking.eventId).select('_id');
+
+      if (!eventExists) {
+        const error = new Error(`Event with ID ${booking.eventId} does not exist`);
+        error.name = 'ValidationError';
+        return next(error);
+      }
+    } catch {
+      const validationError = new Error('Invalid events ID format or database error');
+      validationError.name = 'ValidationError';
+      return next(validationError);
+    }
   }
 
-  const eventExists = await Event.exists({ _id: this.eventId });
-
-  if (!eventExists) {
-    throw new Error(`Cannot book event ${this.eventId.toString()}: it does not exist.`);
-  }
+  next();
 });
 
-// Reuse the compiled model across hot reloads; recompiling under the same name
-// throws OverwriteModelError.
-export const Booking: Model<IBooking> =
-  (models.Booking as Model<IBooking> | undefined) ?? model<IBooking>("Booking", BookingSchema);
+// Create index on eventId for faster queries
+BookingSchema.index({ eventId: 1 });
+
+// Create compound index for common queries (events bookings by date)
+BookingSchema.index({ eventId: 1, createdAt: -1 });
+
+// Create index on email for user booking lookups
+BookingSchema.index({ email: 1 });
+
+// Enforce one booking per events per email
+BookingSchema.index({ eventId: 1, email: 1 }, { unique: true, name: 'uniq_event_email' });
+const Booking = models.Booking || model<IBooking>('Booking', BookingSchema);
+
+export default Booking;
