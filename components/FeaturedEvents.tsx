@@ -1,9 +1,11 @@
 import EventCard from "@/components/EventCard";
 import { IEvent } from "@/database";
+import { getBaseUrl } from "@/lib/getBaseUrl";
 
 const FeaturedEvents = async () => {
+  const baseUrl = getBaseUrl();
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/events`,
+    `${baseUrl}/api/events`,
     {
       method: "GET",
       headers: {
