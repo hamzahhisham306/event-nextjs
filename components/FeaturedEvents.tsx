@@ -1,24 +1,16 @@
 import EventCard from "@/components/EventCard";
-import { IEvent } from "@/database";
-import { getBaseUrl } from "@/lib/getBaseUrl";
+import { getEvents } from "@/lib/data/events";
 
 const FeaturedEvents = async () => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(
-    `${baseUrl}/api/events`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    },
-  );
+  const events = await getEvents();
 
-  const { events } = await response.json();
+  if (events.length === 0) {
+    return <p>No events yet. Check back soon.</p>;
+  }
 
   return (
     <ul className="events">
-      {events.map((event: IEvent) => (
+      {events.map((event) => (
         <li key={event.slug}>
           <EventCard {...event} />
         </li>
