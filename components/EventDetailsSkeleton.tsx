@@ -1,5 +1,7 @@
 import React from 'react'
 
+import EventCardSkeleton from "@/components/EventCardSkeleton";
+
 /**
  * Placeholder shown while `EventDetails` resolves. It mirrors that component's
  * markup and reuses the `#event` classes, so the real content drops into the
@@ -14,18 +16,6 @@ const SkeletonDetailItem = ({ width }: { width: string }) => (
     <div className="flex-row-gap-2 items-center">
         <div className="skeleton size-[17px] shrink-0 rounded" />
         <SkeletonLine className={width} />
-    </div>
-)
-
-const SkeletonCard = () => (
-    <div className="flex flex-col gap-3">
-        <div className="skeleton h-[300px] w-full rounded-lg" />
-        <SkeletonLine className="h-5 w-3/4" />
-        <SkeletonLine className="w-full" />
-        <div className="flex flex-row gap-4">
-            <SkeletonLine className="h-3 w-28" />
-            <SkeletonLine className="h-3 w-20" />
-        </div>
     </div>
 )
 
@@ -102,9 +92,9 @@ const EventDetailsSkeleton = () => (
         <div className="flex w-full flex-col gap-4 pt-20">
             <SkeletonLine className="h-7 w-48" />
             <div className="events">
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
+                <EventCardSkeleton />
+                <EventCardSkeleton />
+                <EventCardSkeleton />
             </div>
         </div>
     </section>

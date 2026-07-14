@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import ExploreBtn from "@/components/ExploreBtn";
 import FeaturedEvents from "@/components/FeaturedEvents";
+import FeaturedEventsSkeleton from "@/components/FeaturedEventsSkeleton";
 
 const Page = () => {
     return (
@@ -14,7 +15,7 @@ const Page = () => {
             <div className="mt-20 space-y-7">
                 <h3>Featured Events</h3>
 
-                <Suspense fallback={<p>Loading events...</p>}>
+                <Suspense fallback={<FeaturedEventsSkeleton />}>
                     <FeaturedEvents />
                 </Suspense>
             </div>
